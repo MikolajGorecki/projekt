@@ -1,0 +1,37 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using WebApplication4;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Dodanie konfiguracji JWT
+var jwtSecret = builder.Configuration["ApplicationSettings:JWT_Secret"];
+var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+// Dodanie kontrolerów
+builder.Services.AddControllers();
+
+// Konfiguracja Swaggera z autoryzacją JWT
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
+
+    var jwtSecurityScheme = new OpenApiSecurityScheme
+    {
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Name = "JWT Authentication",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Description = "Podaj token JWT",
+        Reference = new OpenApiReference
+        {
+            Id = JwtBearerDefaults.AuthenticationScheme,
+            Type = ReferenceType.SecurityScheme
+        }
+    };
+
+    options

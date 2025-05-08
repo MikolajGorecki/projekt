@@ -1,0 +1,137 @@
+using Microsoft.AspNetCore.Mvc;
+
+namespace WebApplication4.Controllers
+{
+    [Route("[controller]")]
+    public class Pracownicy : Controller
+    {
+        private readonly ILogger<Pracownicy> _logger;
+
+        public Pracownicy(ILogger<Pracownicy> logger)
+        {
+            _logger = logger;
+        }
+
+        private static readonly string[] imie = new[]
+        {
+            "Damian", "Anna", "Filip", "Pola", "Adrian", "Maria", "Teofil", "Cyprian", "Weronika", "Justyna"
+        };
+
+        [HttpGet(Name = "Pracownicy")]
+        public IEnumerable<WeatherForecast> Get()
+        {
+            int i = 1;
+            return Enumerable.Range(1, 10).Select(index => new WeatherForecast
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                Pracownik = imie[Random.Shared.Next(imie.Length)],
+                ID = i++
+            })
+            .ToArray();
+        }
+
+        [HttpPost("Create")]
+        public IActionResult Create(WeatherForecast forecast)
+        {
+            return View(forecast);
+        }
+    }
+}
+
+<style>
+    main {
+        text-align: center;
+    }
+
+    .id {
+        margin-bottom: 10px;
+    }
+
+    #btn {
+        margin-top: 10px;
+    }
+
+    .imie {
+        margin-bottom: 10px;
+    }
+</style>
+<main>
+<form action="/" method="post">
+podaj ID:
+<input type="text" name="name" class="id" />
+<br />
+podaj imię:
+<input type="text" name="name" class="imie" />
+<br />
+podaj date;
+<input type="date" name="name" class="data" />
+<br />
+<button id="btn">Zatwierdź</button>
+	</form>
+</main>
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation;
+using Microsoft.IdentityModel.Tokens;
+
+namespace WebApplication4
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+            var configuration = builder.Configuration;
+
+            builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+
+            builder.Services.AddAuthentication(cfg =>
+            {
+                cfg.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                cfg.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                cfg.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(x =>
+            {
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(configuration["ApplicationSettings:JWT_Secret"])
+                    ),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+
+            var app = builder.Build();
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+            app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            app.MapControllerRoute(
+                name: "default",
+                pattern: "{controller=WeatherForecast}/{action=Index}/{id?}");
+
+            app.MapGet("/prostyget", (string a = "a") => $"podaj parametr {a}");
+
+            app.MapControllers();
+
+            app.Run();
+        }
+    }
+}

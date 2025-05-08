@@ -1,0 +1,100 @@
+@model WebApplication4.Models.WeatherForecast
+
+@{
+    ViewData["Title"] = "Dodaj Pracownika";
+}
+
+<h2>Dodaj Pracownika</h2>
+
+@if (ViewBag.Message != null)
+{
+    <div style="color: green">@ViewBag.Message</div>
+}
+
+<form method="post">
+    <div>
+        <label>ID:</label>
+        <input asp-for="ID" />
+        <span asp-validation-for="ID" style="color:red"></span>
+    </div>
+    <div>
+        <label>Imię:</label>
+        <input asp-for="Pracownik" />
+        <span asp-validation-for="Pracownik" style="color:red"></span>
+    </div>
+    <div>
+        <label>Data:</label>
+        <input asp-for="Date" type="date" />
+        <span asp-validation-for="Date" style="color:red"></span>
+    </div>
+    <button type="submit">Zatwierdź</button>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+using Microsoft.AspNetCore.Mvc;
+using WebApplication4.Models;
+
+namespace WebApplication4.Controllers
+{
+    public class PracownicyController : Controller
+    {
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult Create(WeatherForecast forecast)
+        {
+            if (!ModelState.IsValid)
+                return View(forecast);
+
+            // Zwraca dane do potwierdzenia
+            ViewBag.Message = "Pracownik dodany!";
+            return View(forecast);
+        }
+    }
+}
+
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "twoja_aplikacja",
+            ValidAudience = "twoj_frontend",
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("bardzo_tajny_klucz_który_nikt_nie_powinien_znać"))
+        };
+    });
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Pracownicy}/{action=Create}/{id?}");
+
+app.Run();

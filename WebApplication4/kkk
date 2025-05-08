@@ -1,0 +1,150 @@
+{
+  "ApplicationSettings": {
+    "JWT_Secret": "bardzo_tajny_klucz_który_nikt_nie_powinien_znać",
+    "Issuer": "twoja_nazwa_aplikacji",
+    "Audience": "twoja_aplikacja_front"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*"
+}
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+
+namespace WebApplication4
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+            var configuration = builder.Configuration;
+
+            builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+
+            // Konfiguracja autoryzacji JWT
+            builder.Services.AddAuthentication(cfg =>
+            {
+                cfg.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                cfg.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                cfg.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(x =>
+            {
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(configuration["ApplicationSettings:JWT_Secret"])
+                    ),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+            // Tworzenie aplikacji
+            var app = builder.Build();
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+            app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            // Mapowanie kontrolera
+            app.MapControllerRoute(
+                name: "default",
+                pattern: "{controller=Pracownicy}/{action=Index}/{id?}");
+
+            app.Run();
+        }
+    }
+}
+
+@model WebApplication4.WeatherForecast
+
+<main>
+    <h2>Dodaj nowego pracownika</h2>
+    <form action="/Pracownicy/Create" method="post">
+        <label for="ID">Podaj ID:</label>
+        <input type="text" name="ID" class="id" />
+        <br />
+        <label for="Pracownik">Podaj imię:</label>
+        <input type="text" name="Pracownik" class="imie" />
+        <br />
+        <label for="Date">Podaj datę:</label>
+        <input type="date" name="Date" class="data" />
+        <br />
+        <button type="submit" id="btn">Zatwierdź</button>
+    </form>
+
+    @if (Model != null)
+    {
+        <div>
+            <h3>Otrzymane dane:</h3>
+            <p>ID: @Model.ID</p>
+            <p>Imię: @Model.Pracownik</p>
+            <p>Data: @Model.Date.ToString("yyyy-MM-dd")</p>
+        </div>
+    }
+</main>
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace WebApplication4.Controllers
+{
+    [Route("[controller]")]
+    public class PracownicyController : Controller
+    {
+        private readonly ILogger<PracownicyController> _logger;
+
+        public PracownicyController(ILogger<PracownicyController> logger)
+        {
+            _logger = logger;
+        }
+
+        private static readonly string[] imie = new[]
+        {
+            "Damian", "Anna", "Filip", "Pola", "Adrian", "Maria", "Teofil", "Cyprian", "Weronika", "Justyna"
+        };
+
+        // Akcja GET do wyświetlania danych
+        [HttpGet(Name = "Pracownicy")]
+        public IEnumerable<WeatherForecast> Get()
+        {
+            int i = 1;
+            return Enumerable.Range(1, 10).Select(index => new WeatherForecast
+            {
+                Date = DateTime.Now.AddDays(index),
+                Pracownik = imie[Random.Shared.Next(imie.Length)],
+                ID = i++
+            })
+            .ToArray();
+        }
+
+        // Akcja POST do tworzenia pracownika
+        [HttpPost("Create")]
+        public IActionResult Create(WeatherForecast forecast)
+        {
+            return View(forecast);
+        }
+    }
+}
+
+
